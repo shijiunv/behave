@@ -34,7 +34,7 @@ class Blackboard(object):
         self.tick = self.new_iterator(node)
 
     def new_iterator(self, node):
-        """待研究"""
+        """返回一个新的iterator对象"""
         it = node.Iterator(self, node)
         it.done = False
 
@@ -145,7 +145,7 @@ class BeAction(BeNode):
         self.func = other.func
 
     class Iterator(object):
-        """待研究"""
+        """执行节点，使用bb传递函数do_action的参数"""
 
         def __init__(self, bb, node):
             self.func = partial(node.func, *bb.args, **bb.kwargs)
@@ -160,6 +160,8 @@ class BeAction(BeNode):
 
 ##############################################################################
 class BeGeneratorAction(BeNode):
+    """生成器节点"""
+
     def __init__(self, generatorfunc=None):
         super(BeGeneratorAction, self).__init__()
         self.generatorfunc = generatorfunc
@@ -195,6 +197,8 @@ class BeGeneratorAction(BeNode):
 
 ##############################################################################
 class BeCondition(BeNode):
+    """条件节点"""
+
     def __init__(self, func=None):
         super(BeCondition, self).__init__()
         self.func = func

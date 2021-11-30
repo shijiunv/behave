@@ -45,14 +45,7 @@ def is_action(node):
 
 
 def action(f):
-    """动作节点装饰器
-
-    Args:
-        f: 函数
-
-    Returns:
-        [type]: [description]
-    """
+    """动作节点装饰器"""
     if inspect.isgeneratorfunction(f):
         return BeGeneratorAction(f)
     else:
@@ -60,10 +53,13 @@ def action(f):
 
 
 def condition(f):
+    """条件节点装饰器"""
     return BeCondition(f)
 
 
 def generator_decorator(f):
+    """生成器装饰器, 待研究"""
+
     def ctor(bb, node):
         g = f(bb, node)
 
@@ -79,6 +75,7 @@ def generator_decorator(f):
 
 
 def decorator(f):
+    """生成装饰器的装饰器"""
     if inspect.isgeneratorfunction(f):
         f = wraps(f)(generator_decorator(f))
     return BeDecorator([f])
