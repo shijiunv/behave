@@ -9,7 +9,8 @@ RUNNING = "Running"
 
 ##############################################################################
 class BehaveException(Exception):
-    pass
+    """行为树异常"""
+
 
 def wrap_iterator(iterator):
     def wrapped():
@@ -22,16 +23,21 @@ def wrap_iterator(iterator):
     wrapped.done = False
     return wrapped
 
+
 ##############################################################################
 class Blackboard(object):
+    """行为树共享数据"""
+
     def __init__(self, node, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
         self.tick = self.new_iterator(node)
 
     def new_iterator(self, node):
+        """待研究"""
         it = node.Iterator(self, node)
         it.done = False
+
         def it_func():
             if it.done:
                 raise BehaveException("Ticking a finished node.")
@@ -44,22 +50,35 @@ class Blackboard(object):
 
 
 class DebugBlackboard(Blackboard):
+    """带日志的行为树共享数据"""
+
     def __init__(self, node, debugger, *args, **kwargs):
         self.debugger = debugger
         super(DebugBlackboard, self).__init__(node, *args, **kwargs)
 
     def new_iterator(self, node):
         it = Blackboard.new_iterator(self, node)
+
         def wrapper():
             x = it()
             self.debugger(node, x)
             return x
+
         return wrapper
 
 
 ##############################################################################
+
+
 class BeNode(object):
+    """行为树节点"""
+
     def __init__(self):
+        """节点构造函数
+        desc 节点注释
+        name 节点名称
+        """
+
         self.desc = None
         self._name = None
 
@@ -72,12 +91,15 @@ class BeNode(object):
         self._name = value
 
     def blackboard(self, *args, **kwargs):
+        """为节点创建共享数据"""
         return Blackboard(self, *args, **kwargs)
 
     def debug(self, debugger, *args, **kwargs):
+        """为节点创建带日志的共享数据"""
         return DebugBlackboard(self, debugger, *args, **kwargs)
 
     def clone(self):
+        """节点拷贝"""
         c = self.__class__()
         c.copy_from(self)
         return c
@@ -86,12 +108,15 @@ class BeNode(object):
         self.desc = other.desc
 
     def __or__(self, sibling):
+        """使用'|'生成选择器"""
         return BeSelect([self, sibling])
 
     def __rshift__(self, sibling):
+        """使用'>>'生成序列器"""
         return BeSequence([self, sibling])
 
     def __floordiv__(self, desc):
+        """使用'//'生成带注释的节点"""
         c = self.clone()
         c.desc = desc
         return c
@@ -99,6 +124,8 @@ class BeNode(object):
 
 ##############################################################################
 class BeAction(BeNode):
+    """动作节点"""
+
     def __init__(self, func=None):
         super(BeAction, self).__init__()
         self.func = func
@@ -118,6 +145,8 @@ class BeAction(BeNode):
         self.func = other.func
 
     class Iterator(object):
+        """待研究"""
+
         def __init__(self, bb, node):
             self.func = partial(node.func, *bb.args, **bb.kwargs)
 
@@ -127,6 +156,7 @@ class BeAction(BeNode):
                 return SUCCESS
             assert x == SUCCESS or x == FAILURE or x == RUNNING
             return x
+
 
 ##############################################################################
 class BeGeneratorAction(BeNode):
@@ -193,6 +223,8 @@ class BeCondition(BeNode):
 
 ##############################################################################
 class BeComposite(BeNode):
+    """带子节点的节点"""
+
     def __init__(self, children=None):
         super(BeComposite, self).__init__()
         self.children = children or []
@@ -204,7 +236,10 @@ class BeComposite(BeNode):
 
 ##############################################################################
 class BeSelect(BeComposite):
+    """选择器节点"""
+
     def __or__(self, child):
+        """使用'|'添加子节点"""
         children = self.children[:]
         children.append(child)
         return BeSelect(children)
@@ -236,7 +271,10 @@ class BeSelect(BeComposite):
 
 ##############################################################################
 class BeSequence(BeComposite):
+    """序列器节点"""
+
     def __rshift__(self, child):
+        """使用'>>'添加子节点"""
         children = self.children[:]
         children.append(child)
         return BeSequence(children)
@@ -268,6 +306,8 @@ class BeSequence(BeComposite):
 
 ##############################################################################
 class BeDecorator(object):
+    """动态装饰器"""
+
     def __init__(self, decorators=None):
         self.decorators = decorators or []
 
@@ -276,6 +316,10 @@ class BeDecorator(object):
         return BeDecorated(self.decorator, node)
 
     def __mul__(self, other):
+        """使用'*'来动态添加装饰器
+
+        forever * func = forever(func)
+        """
         if isinstance(other, BeDecorator):
             decorators = self.decorators[:]
             decorators.extend(other.decorators)
@@ -291,6 +335,8 @@ class BeDecorator(object):
 
 ##############################################################################
 class BeDecorated(BeNode):
+    """装饰器节点"""
+
     def __init__(self, decorator=None, node=None):
         super(BeDecorated, self).__init__()
         self.decorator = decorator
@@ -322,4 +368,3 @@ class BeDecorated(BeNode):
                 return SUCCESS
             assert x == SUCCESS or x == FAILURE or x == RUNNING
             return x
-
